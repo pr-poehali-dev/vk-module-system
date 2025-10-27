@@ -92,7 +92,10 @@ const PublishModule = ({ onBack }: PublishModuleProps) => {
     }
 
     const selectedGroupsData = groups.filter(g => selectedGroups.includes(g.id));
-    const selectedPostsData = posts.filter(p => selectedPosts.includes(p.id));
+    const selectedPostsData = posts.filter(p => selectedPosts.includes(p.id)).map(p => ({
+      text: p.text,
+      image: p.media || ''
+    }));
 
     try {
       const response = await fetch('https://functions.poehali.dev/c8d5eec5-e483-4d42-a726-b75976b98876', {
