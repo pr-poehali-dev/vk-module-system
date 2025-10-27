@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
+import { useToast } from '@/hooks/use-toast';
 import {
   Table,
   TableBody,
@@ -35,25 +37,168 @@ interface DatabaseModuleProps {
   onBack: () => void;
 }
 
+interface Group {
+  id: string;
+  name: string;
+  groupId: string;
+  category: string;
+  members: number;
+}
+
+interface Post {
+  id: string;
+  category: string;
+  text: string;
+  media: string | null;
+}
+
+interface Category {
+  id: string;
+  name: string;
+}
+
 const DatabaseModule = ({ onBack }: DatabaseModuleProps) => {
   const [activeTab, setActiveTab] = useState('groups');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false);
+  const [isPostDialogOpen, setIsPostDialogOpen] = useState(false);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const { toast } = useToast();
 
-  const mockGroups = [
-    { id: '1', name: 'Образовательный портал', category: 'Образование', members: 15420 },
-    { id: '2', name: 'Технологии будущего', category: 'Технологии', members: 8930 },
-    { id: '3', name: 'Бизнес-советы', category: 'Бизнес', members: 12100 },
-  ];
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [categories, setCategories] = useState<Category[]>([
+    { id: '1', name: 'Образование' },
+    { id: '2', name: 'Технологии' },
+    { id: '3', name: 'Бизнес' },
+    { id: '4', name: 'Развлечения' },
+  ]);
 
-  const mockPosts = [
-    { id: '1', category: 'Образование', text: 'Новый курс по Python программированию', media: 'image.jpg' },
-    { id: '2', category: 'Технологии', text: 'Обзор последних тенденций в AI', media: 'video.mp4' },
-  ];
+  const [newGroup, setNewGroup] = useState({ groupId: '', name: '', category: '', members: 0 });
+  const [newPost, setNewPost] = useState({ category: '', text: '', media: '' });
+  const [newCategory, setNewCategory] = useState('');
 
-  const mockTokens = [
-    { id: '1', name: 'Основной токен', value: 'vk1.a.***************', status: 'active' },
-    { id: '2', name: 'Резервный токен', value: 'vk1.a.***************', status: 'active' },
-  ];
+  useEffect(() => {
+    const savedGroups = localStorage.getItem('vk_groups');
+    const savedPosts = localStorage.getItem('vk_posts');
+    const savedCategories = localStorage.getItem('vk_categories');
+
+    if (savedGroups) setGroups(JSON.parse(savedGroups));
+    if (savedPosts) setPosts(JSON.parse(savedPosts));
+    if (savedCategories) setCategories(JSON.parse(savedCategories));
+  }, []);
+
+  const saveGroups = (newGroups: Group[]) => {
+    setGroups(newGroups);
+    localStorage.setItem('vk_groups', JSON.stringify(newGroups));
+  };
+
+  const savePosts = (newPosts: Post[]) => {
+    setPosts(newPosts);
+    localStorage.setItem('vk_posts', JSON.stringify(newPosts));
+  };
+
+  const saveCategories = (newCategories: Category[]) => {
+    setCategories(newCategories);
+    localStorage.setItem('vk_categories', JSON.stringify(newCategories));
+  };
+
+  const handleAddGroup = () => {
+    if (!newGroup.groupId || !newGroup.name || !newGroup.category) {
+      toast({
+        title: 'Ошибка',
+        description: 'Заполните все обязательные поля',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const group: Group = {
+      id: Date.now().toString(),
+      ...newGroup,
+    };
+
+    saveGroups([...groups, group]);
+    setNewGroup({ groupId: '', name: '', category: '', members: 0 });
+    setIsGroupDialogOpen(false);
+    toast({
+      title: 'Успешно',
+      description: 'Группа добавлена',
+    });
+  };
+
+  const handleDeleteGroup = (id: string) => {
+    saveGroups(groups.filter(g => g.id !== id));
+    toast({
+      title: 'Успешно',
+      description: 'Группа удалена',
+    });
+  };
+
+  const handleAddPost = () => {
+    if (!newPost.category || !newPost.text) {
+      toast({
+        title: 'Ошибка',
+        description: 'Заполните все обязательные поля',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const post: Post = {
+      id: Date.now().toString(),
+      category: newPost.category,
+      text: newPost.text,
+      media: newPost.media || null,
+    };
+
+    savePosts([...posts, post]);
+    setNewPost({ category: '', text: '', media: '' });
+    setIsPostDialogOpen(false);
+    toast({
+      title: 'Успешно',
+      description: 'Пост добавлен',
+    });
+  };
+
+  const handleDeletePost = (id: string) => {
+    savePosts(posts.filter(p => p.id !== id));
+    toast({
+      title: 'Успешно',
+      description: 'Пост удален',
+    });
+  };
+
+  const handleAddCategory = () => {
+    if (!newCategory.trim()) {
+      toast({
+        title: 'Ошибка',
+        description: 'Введите название категории',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const category: Category = {
+      id: Date.now().toString(),
+      name: newCategory.trim(),
+    };
+
+    saveCategories([...categories, category]);
+    setNewCategory('');
+    setIsCategoryDialogOpen(false);
+    toast({
+      title: 'Успешно',
+      description: 'Категория добавлена',
+    });
+  };
+
+  const handleDeleteCategory = (id: string) => {
+    saveCategories(categories.filter(c => c.id !== id));
+    toast({
+      title: 'Успешно',
+      description: 'Категория удалена',
+    });
+  };
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -64,7 +209,7 @@ const DatabaseModule = ({ onBack }: DatabaseModuleProps) => {
           </Button>
           <div>
             <h1 className="text-3xl font-bold">Управление базой данных</h1>
-            <p className="text-muted-foreground">Редактирование групп, постов и токенов</p>
+            <p className="text-muted-foreground">Редактирование групп, постов и категорий</p>
           </div>
         </div>
       </div>
@@ -73,15 +218,15 @@ const DatabaseModule = ({ onBack }: DatabaseModuleProps) => {
         <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="groups">
             <Icon name="Users" size={16} className="mr-2" />
-            Группы
+            Группы ({groups.length})
           </TabsTrigger>
           <TabsTrigger value="posts">
             <Icon name="FileText" size={16} className="mr-2" />
-            Посты
+            Посты ({posts.length})
           </TabsTrigger>
-          <TabsTrigger value="tokens">
-            <Icon name="Key" size={16} className="mr-2" />
-            Токены
+          <TabsTrigger value="categories">
+            <Icon name="Folders" size={16} className="mr-2" />
+            Категории ({categories.length})
           </TabsTrigger>
         </TabsList>
 
@@ -90,7 +235,7 @@ const DatabaseModule = ({ onBack }: DatabaseModuleProps) => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Группы ВКонтакте</CardTitle>
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}>
                   <DialogTrigger asChild>
                     <Button>
                       <Icon name="Plus" size={16} className="mr-2" />
@@ -106,70 +251,93 @@ const DatabaseModule = ({ onBack }: DatabaseModuleProps) => {
                     </DialogHeader>
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label>ID группы</Label>
-                        <Input placeholder="123456789" />
+                        <Label>ID группы *</Label>
+                        <Input
+                          placeholder="123456789"
+                          value={newGroup.groupId}
+                          onChange={(e) => setNewGroup({ ...newGroup, groupId: e.target.value })}
+                        />
                       </div>
                       <div className="space-y-2">
-                        <Label>Название</Label>
-                        <Input placeholder="Название группы" />
+                        <Label>Название *</Label>
+                        <Input
+                          placeholder="Название группы"
+                          value={newGroup.name}
+                          onChange={(e) => setNewGroup({ ...newGroup, name: e.target.value })}
+                        />
                       </div>
                       <div className="space-y-2">
-                        <Label>Категория</Label>
-                        <Select>
+                        <Label>Категория *</Label>
+                        <Select value={newGroup.category} onValueChange={(v) => setNewGroup({ ...newGroup, category: v })}>
                           <SelectTrigger>
                             <SelectValue placeholder="Выберите категорию" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="education">Образование</SelectItem>
-                            <SelectItem value="tech">Технологии</SelectItem>
-                            <SelectItem value="business">Бизнес</SelectItem>
-                            <SelectItem value="entertainment">Развлечения</SelectItem>
+                            {categories.map(cat => (
+                              <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
+                      <div className="space-y-2">
+                        <Label>Количество участников</Label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          value={newGroup.members || ''}
+                          onChange={(e) => setNewGroup({ ...newGroup, members: parseInt(e.target.value) || 0 })}
+                        />
+                      </div>
                     </div>
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                      <Button variant="outline" onClick={() => setIsGroupDialogOpen(false)}>
                         Отмена
                       </Button>
-                      <Button onClick={() => setIsDialogOpen(false)}>Сохранить</Button>
+                      <Button onClick={handleAddGroup}>Сохранить</Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>№</TableHead>
-                    <TableHead>Название</TableHead>
-                    <TableHead>Категория</TableHead>
-                    <TableHead>Участников</TableHead>
-                    <TableHead className="text-right">Действия</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {mockGroups.map((group, index) => (
-                    <TableRow key={group.id}>
-                      <TableCell>{index + 1}</TableCell>
-                      <TableCell className="font-medium">{group.name}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{group.category}</Badge>
-                      </TableCell>
-                      <TableCell>{group.members.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon">
-                          <Icon name="Pencil" size={16} />
-                        </Button>
-                        <Button variant="ghost" size="icon">
-                          <Icon name="Trash2" size={16} />
-                        </Button>
-                      </TableCell>
+              {groups.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Icon name="Users" size={48} className="mx-auto mb-4 opacity-50" />
+                  <p>Нет добавленных групп</p>
+                  <p className="text-sm">Нажмите "Добавить группу" для начала</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>№</TableHead>
+                      <TableHead>ID группы</TableHead>
+                      <TableHead>Название</TableHead>
+                      <TableHead>Категория</TableHead>
+                      <TableHead>Участников</TableHead>
+                      <TableHead className="text-right">Действия</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {groups.map((group, index) => (
+                      <TableRow key={group.id}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell className="font-mono text-sm">{group.groupId}</TableCell>
+                        <TableCell className="font-medium">{group.name}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{group.category}</Badge>
+                        </TableCell>
+                        <TableCell>{group.members.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteGroup(group.id)}>
+                            <Icon name="Trash2" size={16} />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -179,105 +347,175 @@ const DatabaseModule = ({ onBack }: DatabaseModuleProps) => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Посты для публикации</CardTitle>
-                <Button>
-                  <Icon name="Plus" size={16} className="mr-2" />
-                  Добавить пост
-                </Button>
+                <Dialog open={isPostDialogOpen} onOpenChange={setIsPostDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Icon name="Plus" size={16} className="mr-2" />
+                      Добавить пост
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Добавить новый пост</DialogTitle>
+                      <DialogDescription>
+                        Создайте пост для последующей публикации
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Категория *</Label>
+                        <Select value={newPost.category} onValueChange={(v) => setNewPost({ ...newPost, category: v })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Выберите категорию" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.map(cat => (
+                              <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Текст поста *</Label>
+                        <Textarea
+                          placeholder="Введите текст поста..."
+                          rows={6}
+                          value={newPost.text}
+                          onChange={(e) => setNewPost({ ...newPost, text: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Ссылка на медиа (опционально)</Label>
+                        <Input
+                          placeholder="https://example.com/image.jpg"
+                          value={newPost.media}
+                          onChange={(e) => setNewPost({ ...newPost, media: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsPostDialogOpen(false)}>
+                        Отмена
+                      </Button>
+                      <Button onClick={handleAddPost}>Сохранить</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>№</TableHead>
-                    <TableHead>Категория</TableHead>
-                    <TableHead>Текст</TableHead>
-                    <TableHead>Медиа</TableHead>
-                    <TableHead className="text-right">Действия</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {mockPosts.map((post, index) => (
-                    <TableRow key={post.id}>
-                      <TableCell>{index + 1}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{post.category}</Badge>
-                      </TableCell>
-                      <TableCell className="max-w-md truncate">{post.text}</TableCell>
-                      <TableCell>
-                        {post.media ? (
-                          <Badge variant="outline">
-                            <Icon name="Paperclip" size={12} className="mr-1" />
-                            {post.media}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">Нет</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon">
-                          <Icon name="Pencil" size={16} />
-                        </Button>
-                        <Button variant="ghost" size="icon">
-                          <Icon name="Trash2" size={16} />
-                        </Button>
-                      </TableCell>
+              {posts.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Icon name="FileText" size={48} className="mx-auto mb-4 opacity-50" />
+                  <p>Нет созданных постов</p>
+                  <p className="text-sm">Нажмите "Добавить пост" для начала</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>№</TableHead>
+                      <TableHead>Категория</TableHead>
+                      <TableHead>Текст</TableHead>
+                      <TableHead>Медиа</TableHead>
+                      <TableHead className="text-right">Действия</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {posts.map((post, index) => (
+                      <TableRow key={post.id}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{post.category}</Badge>
+                        </TableCell>
+                        <TableCell className="max-w-md">
+                          <div className="truncate">{post.text}</div>
+                        </TableCell>
+                        <TableCell>
+                          {post.media ? (
+                            <Badge variant="outline">
+                              <Icon name="Paperclip" size={12} className="mr-1" />
+                              Есть
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">Нет</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => handleDeletePost(post.id)}>
+                            <Icon name="Trash2" size={16} />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="tokens">
+        <TabsContent value="categories">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Токены доступа VK API</CardTitle>
-                <Button>
-                  <Icon name="Plus" size={16} className="mr-2" />
-                  Добавить токен
-                </Button>
+                <CardTitle>Категории</CardTitle>
+                <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Icon name="Plus" size={16} className="mr-2" />
+                      Добавить категорию
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Добавить новую категорию</DialogTitle>
+                      <DialogDescription>
+                        Создайте категорию для организации групп и постов
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Название категории *</Label>
+                        <Input
+                          placeholder="Например: Образование"
+                          value={newCategory}
+                          onChange={(e) => setNewCategory(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>
+                        Отмена
+                      </Button>
+                      <Button onClick={handleAddCategory}>Сохранить</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>№</TableHead>
-                    <TableHead>Название</TableHead>
-                    <TableHead>Токен</TableHead>
-                    <TableHead>Статус</TableHead>
-                    <TableHead className="text-right">Действия</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {mockTokens.map((token, index) => (
-                    <TableRow key={token.id}>
-                      <TableCell>{index + 1}</TableCell>
-                      <TableCell className="font-medium">{token.name}</TableCell>
-                      <TableCell>
-                        <code className="text-xs bg-muted px-2 py-1 rounded">{token.value}</code>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-green-600 border-green-600">
-                          <Icon name="CheckCircle2" size={12} className="mr-1" />
-                          {token.status === 'active' ? 'Активен' : 'Неактивен'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon">
-                          <Icon name="Pencil" size={16} />
-                        </Button>
-                        <Button variant="ghost" size="icon">
-                          <Icon name="Trash2" size={16} />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {categories.map((category) => (
+                  <Card key={category.id} className="hover-scale">
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Icon name="Folder" size={20} className="text-primary" />
+                        </div>
+                        <span className="font-medium">{category.name}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteCategory(category.id)}
+                      >
+                        <Icon name="Trash2" size={16} />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
