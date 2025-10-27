@@ -10,10 +10,14 @@
       }
     },
     {
-      "name": "Test POST without body",
+      "name": "Test POST with empty groups",
       "method": "POST",
       "path": "/",
-      "body": {},
+      "body": {
+        "token": "test",
+        "groups": [],
+        "posts": []
+      },
       "expectedStatus": 400,
       "expectedBody": {
         "error": "string"
@@ -27,11 +31,12 @@
       "body": {
         "token": "test_token",
         "groups": [{"groupId": "123", "name": "Test Group"}],
-        "posts": [{"text": "Test post"}]
+        "posts": [{"text": "Test post", "image": ""}]
       },
       "expectedStatus": 200,
       "expectedBody": {
-        "results": "array"
+        "results": "array",
+        "total": "number"
       },
       "bodyMatcher": "partial"
     }
