@@ -25,31 +25,24 @@ const AuthPage = ({ onAuth }: AuthPageProps) => {
       return;
     }
 
-    setIsLoading(true);
-
-    try {
-      const response = await fetch(`https://api.vk.com/method/users.get?access_token=${token}&v=5.131`);
-      const data = await response.json();
-
-      if (data.error) {
-        throw new Error(data.error.error_msg);
-      }
-
-      localStorage.setItem('vk_token', token);
+    if (!token.startsWith('vk1.')) {
       toast({
-        title: 'Успешно',
-        description: 'Авторизация выполнена',
-      });
-      onAuth(token);
-    } catch (error) {
-      toast({
-        title: 'Ошибка авторизации',
-        description: error instanceof Error ? error.message : 'Проверьте токен и попробуйте снова',
+        title: 'Ошибка',
+        description: 'Неверный формат токена VK API',
         variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
+      return;
     }
+
+    setIsLoading(true);
+
+    localStorage.setItem('vk_token', token);
+    toast({
+      title: 'Успешно',
+      description: 'Токен сохранен. Теперь можно работать с панелью управления',
+    });
+    onAuth(token);
+    setIsLoading(false);
   };
 
   return (
