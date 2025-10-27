@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -38,20 +38,26 @@ const PublishModule = ({ onBack }: PublishModuleProps) => {
   const [isExecuting, setIsExecuting] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const mockGroups = [
-    { id: '1', name: 'Образовательный портал', category: 'Образование', members: 15420 },
-    { id: '2', name: 'Технологии будущего', category: 'Технологии', members: 8930 },
-    { id: '3', name: 'Бизнес-советы', category: 'Бизнес', members: 12100 },
-    { id: '4', name: 'Развлекательный контент', category: 'Развлечения', members: 25600 },
-  ];
+  const [groups, setGroups] = useState<any[]>([]);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<string[]>(['all']);
 
-  const mockPosts = [
-    { id: '1', category: 'Образование', text: 'Новый курс по Python программированию', media: 'image.jpg' },
-    { id: '2', category: 'Технологии', text: 'Обзор последних тенденций в AI', media: 'video.mp4' },
-    { id: '3', category: 'Бизнес', text: '5 советов для стартапов', media: null },
-  ];
+  useEffect(() => {
+    const savedGroups = localStorage.getItem('vk_groups');
+    const savedPosts = localStorage.getItem('vk_posts');
+    const savedCategories = localStorage.getItem('vk_categories');
 
-  const categories = ['all', 'Образование', 'Технологии', 'Бизнес', 'Развлечения'];
+    if (savedGroups) {
+      setGroups(JSON.parse(savedGroups));
+    }
+    if (savedPosts) {
+      setPosts(JSON.parse(savedPosts));
+    }
+    if (savedCategories) {
+      const cats = JSON.parse(savedCategories);
+      setCategories(['all', ...cats.map((c: any) => c.name)]);
+    }
+  }, []);
 
   const handleGroupToggle = (id: string) => {
     setSelectedGroups(prev =>
@@ -80,12 +86,12 @@ const PublishModule = ({ onBack }: PublishModuleProps) => {
   };
 
   const filteredGroups = filterCategory === 'all' 
-    ? mockGroups 
-    : mockGroups.filter(g => g.category === filterCategory);
+    ? groups 
+    : groups.filter(g => g.category === filterCategory);
 
   const filteredPosts = filterCategory === 'all'
-    ? mockPosts
-    : mockPosts.filter(p => p.category === filterCategory);
+    ? posts
+    : posts.filter(p => p.category === filterCategory);
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -144,35 +150,43 @@ const PublishModule = ({ onBack }: PublishModuleProps) => {
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12"></TableHead>
-                    <TableHead>№</TableHead>
-                    <TableHead>Название</TableHead>
-                    <TableHead>Категория</TableHead>
-                    <TableHead>Участников</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredGroups.map((group, index) => (
-                    <TableRow key={group.id} className="cursor-pointer hover:bg-muted/50">
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedGroups.includes(group.id)}
-                          onCheckedChange={() => handleGroupToggle(group.id)}
-                        />
-                      </TableCell>
-                      <TableCell>{index + 1}</TableCell>
-                      <TableCell className="font-medium">{group.name}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{group.category}</Badge>
-                      </TableCell>
-                      <TableCell>{group.members.toLocaleString()}</TableCell>
+{filteredGroups.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Icon name="Users" size={48} className="mx-auto mb-4 opacity-50" />
+                  <p>Нет добавленных групп</p>
+                  <p className="text-sm">Добавьте группы в разделе "Управление БД"</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12"></TableHead>
+                      <TableHead>№</TableHead>
+                      <TableHead>Название</TableHead>
+                      <TableHead>Категория</TableHead>
+                      <TableHead>Участников</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredGroups.map((group, index) => (
+                      <TableRow key={group.id} className="cursor-pointer hover:bg-muted/50">
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedGroups.includes(group.id)}
+                            onCheckedChange={() => handleGroupToggle(group.id)}
+                          />
+                        </TableCell>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell className="font-medium">{group.name}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{group.category}</Badge>
+                        </TableCell>
+                        <TableCell>{group.members.toLocaleString()}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
               <div className="mt-4 flex justify-between items-center">
                 <p className="text-sm text-muted-foreground">
                   Выбрано групп: <span className="font-semibold">{selectedGroups.length}</span>
@@ -206,44 +220,52 @@ const PublishModule = ({ onBack }: PublishModuleProps) => {
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12"></TableHead>
-                    <TableHead>№</TableHead>
-                    <TableHead>Категория</TableHead>
-                    <TableHead>Текст поста</TableHead>
-                    <TableHead>Медиа</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPosts.map((post, index) => (
-                    <TableRow key={post.id} className="cursor-pointer hover:bg-muted/50">
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedPosts.includes(post.id)}
-                          onCheckedChange={() => handlePostToggle(post.id)}
-                        />
-                      </TableCell>
-                      <TableCell>{index + 1}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{post.category}</Badge>
-                      </TableCell>
-                      <TableCell className="font-medium max-w-md truncate">{post.text}</TableCell>
-                      <TableCell>
-                        {post.media ? (
-                          <Badge variant="outline">
-                            <Icon name="Paperclip" size={12} className="mr-1" />
-                            {post.media}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">Нет</span>
-                        )}
-                      </TableCell>
+              {filteredPosts.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Icon name="FileText" size={48} className="mx-auto mb-4 opacity-50" />
+                  <p>Нет созданных постов</p>
+                  <p className="text-sm">Добавьте посты в разделе "Управление БД"</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12"></TableHead>
+                      <TableHead>№</TableHead>
+                      <TableHead>Категория</TableHead>
+                      <TableHead>Текст поста</TableHead>
+                      <TableHead>Медиа</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPosts.map((post, index) => (
+                      <TableRow key={post.id} className="cursor-pointer hover:bg-muted/50">
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedPosts.includes(post.id)}
+                            onCheckedChange={() => handlePostToggle(post.id)}
+                          />
+                        </TableCell>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{post.category}</Badge>
+                        </TableCell>
+                        <TableCell className="font-medium max-w-md truncate">{post.text}</TableCell>
+                        <TableCell>
+                          {post.media ? (
+                            <Badge variant="outline">
+                              <Icon name="Paperclip" size={12} className="mr-1" />
+                              Есть
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">Нет</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
               <div className="mt-4 flex justify-between items-center">
                 <p className="text-sm text-muted-foreground">
                   Выбрано постов: <span className="font-semibold">{selectedPosts.length}</span>
