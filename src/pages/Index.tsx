@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,11 +9,44 @@ import LikeModule from '@/components/modules/LikeModule';
 import DatabaseModule from '@/components/modules/DatabaseModule';
 import SettingsModule from '@/components/modules/SettingsModule';
 import HistoryModule from '@/components/modules/HistoryModule';
+import AuthPage from '@/components/auth/AuthPage';
 
 type ModuleType = 'dashboard' | 'publish' | 'repost' | 'like' | 'database' | 'settings' | 'history';
 
 const Index = () => {
   const [activeModule, setActiveModule] = useState<ModuleType>('dashboard');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem('vk_token');
+    if (token) {
+      setIsAuthenticated(true);
+    }
+    setIsLoading(false);
+  }, []);
+
+  const handleAuth = (token: string) => {
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('vk_token');
+    setIsAuthenticated(false);
+    setActiveModule('dashboard');
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Icon name="Loader2" size={32} className="animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <AuthPage onAuth={handleAuth} />;
+  }
 
   const modules = [
     {
@@ -95,10 +128,16 @@ const Index = () => {
         <div className="mb-8 fade-in">
           <div className="flex items-center justify-between mb-2">
             <h1 className="text-4xl font-bold text-foreground">VK Manager Pro</h1>
-            <Badge variant="secondary" className="text-sm px-3 py-1">
-              <Icon name="Activity" size={16} className="mr-2" />
-              Активно
-            </Badge>
+            <div className="flex items-center gap-3">
+              <Badge variant="secondary" className="text-sm px-3 py-1">
+                <Icon name="Activity" size={16} className="mr-2" />
+                Активно
+              </Badge>
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <Icon name="LogOut" size={16} className="mr-2" />
+                Выйти
+              </Button>
+            </div>
           </div>
           <p className="text-muted-foreground text-lg">
             Профессиональная панель управления ВКонтакте
