@@ -1,0 +1,44 @@
+{
+  "tests": [
+    {
+      "name": "Test OPTIONS CORS request",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedHeaders": {
+        "Access-Control-Allow-Origin": "*"
+      }
+    },
+    {
+      "name": "Test POST with missing fields",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "token": "test"
+      },
+      "expectedStatus": 400,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Test POST with valid structure",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "token": "test_token",
+        "sourceGroups": ["123"],
+        "sourceUsers": [],
+        "postCount": 5,
+        "targetGroups": [{"groupId": "456", "name": "Target Group"}]
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "results": "array",
+        "total": "number"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
