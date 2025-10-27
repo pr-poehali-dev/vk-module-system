@@ -83,6 +83,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 attachment = None
                 if image_url:
                     attachment = parse_vk_attachment(image_url)
+                    print(f"Image URL: {image_url}, Parsed attachment: {attachment}")
                 
                 params = {
                     'owner_id': f'-{group_id}',
