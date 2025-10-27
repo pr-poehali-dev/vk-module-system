@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -41,6 +42,8 @@ const PublishModule = ({ onBack }: PublishModuleProps) => {
   const [groups, setGroups] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [categories, setCategories] = useState<string[]>(['all']);
+  const [publishLogs, setPublishLogs] = useState<any[]>([]);
+  const { toast } = useToast();
 
   useEffect(() => {
     const savedGroups = localStorage.getItem('vk_groups');
@@ -71,18 +74,65 @@ const PublishModule = ({ onBack }: PublishModuleProps) => {
     );
   };
 
-  const handleExecute = () => {
+  const handleExecute = async () => {
     setIsExecuting(true);
     setCurrentStep('execution');
-    let currentProgress = 0;
-    const interval = setInterval(() => {
-      currentProgress += 10;
-      setProgress(currentProgress);
-      if (currentProgress >= 100) {
-        clearInterval(interval);
-        setIsExecuting(false);
+    setProgress(0);
+    setPublishLogs([]);
+
+    const token = localStorage.getItem('vk_token');
+    if (!token) {
+      toast({
+        title: 'Ошибка',
+        description: 'Токен VK API не найден',
+        variant: 'destructive',
+      });
+      setIsExecuting(false);
+      return;
+    }
+
+    const selectedGroupsData = groups.filter(g => selectedGroups.includes(g.id));
+    const selectedPostsData = posts.filter(p => selectedPosts.includes(p.id));
+
+    try {
+      const response = await fetch('https://functions.poehali.dev/c8d5eec5-e483-4d42-a726-b75976b98876', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token,
+          groups: selectedGroupsData,
+          posts: selectedPostsData,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.results) {
+        setPublishLogs(result.results);
+        setProgress(100);
+        
+        const successCount = result.successful || 0;
+        const totalCount = result.total || 0;
+        
+        toast({
+          title: 'Публикация завершена',
+          description: `Успешно: ${successCount} из ${totalCount}`,
+        });
+      } else {
+        throw new Error(result.error || 'Unknown error');
       }
-    }, 500);
+    } catch (error) {
+      toast({
+        title: 'Ошибка публикации',
+        description: error instanceof Error ? error.message : 'Проверьте токен и попробуйте снова',
+        variant: 'destructive',
+      });
+      setProgress(0);
+    } finally {
+      setIsExecuting(false);
+    }
   };
 
   const filteredGroups = filterCategory === 'all' 
@@ -344,18 +394,31 @@ const PublishModule = ({ onBack }: PublishModuleProps) => {
               </div>
 
               <div className="bg-muted/50 rounded-lg p-4 space-y-2 max-h-64 overflow-y-auto">
-                <div className="flex items-center gap-2 text-sm">
-                  <Icon name="CheckCircle2" size={16} className="text-green-600" />
-                  <span>Группа "Образовательный портал" - Пост опубликован</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Icon name="CheckCircle2" size={16} className="text-green-600" />
-                  <span>Группа "Технологии будущего" - Пост опубликован</span>
-                </div>
-                {progress < 100 && (
+                {publishLogs.length === 0 && progress < 100 && (
                   <div className="flex items-center gap-2 text-sm">
                     <Icon name="Loader2" size={16} className="animate-spin text-blue-600" />
                     <span>Публикация в процессе...</span>
+                  </div>
+                )}
+                {publishLogs.map((log, index) => (
+                  <div key={index} className="flex items-start gap-2 text-sm">
+                    {log.success ? (
+                      <Icon name="CheckCircle2" size={16} className="text-green-600 flex-shrink-0 mt-0.5" />
+                    ) : (
+                      <Icon name="XCircle" size={16} className="text-red-600 flex-shrink-0 mt-0.5" />
+                    )}
+                    <div className="flex-1">
+                      <div className="font-medium">{log.group}</div>
+                      <div className="text-muted-foreground text-xs">{log.post}</div>
+                      {!log.success && log.error && (
+                        <div className="text-red-600 text-xs mt-1">{log.error}</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {publishLogs.length === 0 && progress === 0 && !isExecuting && (
+                  <div className="text-center text-muted-foreground text-sm py-4">
+                    Ожидание запуска...
                   </div>
                 )}
               </div>

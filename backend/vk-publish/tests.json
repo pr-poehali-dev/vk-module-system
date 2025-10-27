@@ -1,0 +1,39 @@
+{
+  "tests": [
+    {
+      "name": "Test OPTIONS CORS request",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedHeaders": {
+        "Access-Control-Allow-Origin": "*"
+      }
+    },
+    {
+      "name": "Test POST without body",
+      "method": "POST",
+      "path": "/",
+      "body": {},
+      "expectedStatus": 400,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Test POST with valid structure",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "token": "test_token",
+        "groups": [{"groupId": "123", "name": "Test Group"}],
+        "posts": [{"text": "Test post"}]
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "results": "array"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
